@@ -40,6 +40,9 @@ vào được app từ bất cứ đâu mà người ngoài không thấy.
      đợt thì tự bỏ qua. Có nút *Tải file Excel mẫu* nếu muốn điền theo mẫu.
    - *Gõ tay*: mỗi dòng một họ tên.
    - Danh sách hiện trạng thái từng em: 📷 số ảnh, ✅ đã chấm.
+   - **Nhập nhầm cả danh sách**: mở *🗑 Xoá nhiều học sinh một lúc* → bấm
+     *Chọn tất cả* (hoặc tích từng em) → tick ô xác nhận → bấm *Xoá … em đã
+     chọn*. Xoá cả ảnh và điểm của các em đó, không khôi phục được.
 3. **Chụp bài** — chọn em trong danh sách (app tự chọn em đầu tiên chưa
    chụp). Mỗi trang bài làm chụp một ảnh, bấm *Lưu trang vừa chụp*; ảnh hiện
    ngay bên dưới, chụp nhầm thì bấm *Xoá*. Nút *Em tiếp theo* / *Em trước* để

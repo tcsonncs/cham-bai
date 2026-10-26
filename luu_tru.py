@@ -114,6 +114,19 @@ def them_hoc_sinh(dot_id: int, ho_ten: str, ma_hs: str = "") -> int:
         return cur.lastrowid
 
 
+def them_nhieu_hoc_sinh(dot_id: int, danh_sach) -> int:
+    """Thêm nhiều học sinh trong một lượt. danh_sach: [{"ho_ten", "ma_hs"}]."""
+    dong = [(dot_id, (m.get("ho_ten") or "").strip(),
+             (m.get("ma_hs") or "").strip())
+            for m in danh_sach if (m.get("ho_ten") or "").strip()]
+    if not dong:
+        return 0
+    with ket_noi() as conn:
+        conn.executemany(
+            "INSERT INTO hoc_sinh (dot_id, ho_ten, ma_hs) VALUES (?,?,?)", dong)
+    return len(dong)
+
+
 def danh_sach_hoc_sinh(dot_id: int):
     with ket_noi() as conn:
         return [dict(r) for r in conn.execute(
@@ -124,6 +137,17 @@ def xoa_hoc_sinh(hs_id: int) -> None:
     with ket_noi() as conn:
         conn.execute("DELETE FROM bai_lam WHERE hs_id=?", (hs_id,))
         conn.execute("DELETE FROM hoc_sinh WHERE id=?", (hs_id,))
+
+
+def xoa_nhieu_hoc_sinh(ds_id) -> None:
+    """Xoá nhiều học sinh (và bài làm của họ) trong một lượt."""
+    ds_id = [int(i) for i in ds_id]
+    if not ds_id:
+        return
+    cho = ",".join("?" * len(ds_id))
+    with ket_noi() as conn:
+        conn.execute(f"DELETE FROM bai_lam WHERE hs_id IN ({cho})", ds_id)
+        conn.execute(f"DELETE FROM hoc_sinh WHERE id IN ({cho})", ds_id)
 
 
 # ---------- bài làm ----------
@@ -218,7 +242,8 @@ if DUNG_SHEETS:
 
     for _ten_ham in (
         "tao_dot", "danh_sach_dot", "lay_dot", "cap_nhat_dot",
-        "them_hoc_sinh", "danh_sach_hoc_sinh", "xoa_hoc_sinh",
+        "them_hoc_sinh", "them_nhieu_hoc_sinh", "danh_sach_hoc_sinh",
+        "xoa_hoc_sinh", "xoa_nhieu_hoc_sinh",
         "lay_bai", "luu_anh_bai", "cap_nhat_bai",
     ):
         globals()[_ten_ham] = getattr(_kho_may, _ten_ham)

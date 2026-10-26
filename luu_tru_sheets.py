@@ -134,6 +134,23 @@ def them_hoc_sinh(dot_id: int, ho_ten: str, ma_hs: str = "") -> int:
     return moi["id"]
 
 
+def them_nhieu_hoc_sinh(dot_id: int, danh_sach) -> int:
+    """Thêm nhiều học sinh bằng một lượt đọc và một lượt ghi lên trang tính."""
+    dl = _du_lieu_moi()
+    ds = dl["hoc_sinh"]
+    dem = 0
+    for m in danh_sach:
+        ten = (m.get("ho_ten") or "").strip()
+        if not ten:
+            continue
+        ds.append({"id": _max_id(ds) + 1, "dot_id": int(dot_id),
+                   "ho_ten": ten, "ma_hs": (m.get("ma_hs") or "").strip()})
+        dem += 1
+    if dem:
+        _ghi("hoc_sinh", ds)
+    return dem
+
+
 def danh_sach_hoc_sinh(dot_id: int):
     ds = [d for d in _du_lieu()["hoc_sinh"]
           if int(float(d["dot_id"])) == int(dot_id)]
@@ -146,6 +163,23 @@ def xoa_hoc_sinh(hs_id: int) -> None:
                       if int(float(d["id"])) != int(hs_id)]
     dl["bai_lam"] = [b for b in dl["bai_lam"]
                      if int(float(b["hs_id"])) != int(hs_id)]
+    _ghi("hoc_sinh", dl["hoc_sinh"])
+    _ghi("bai_lam", dl["bai_lam"])
+
+
+def xoa_nhieu_hoc_sinh(ds_id) -> None:
+    """Xoá nhiều học sinh trong một lượt: đọc kho một lần, ghi hai lần.
+
+    Không gọi xoa_hoc_sinh từng em vì mỗi lần như thế tốn mấy lượt gọi mạng.
+    """
+    can_xoa = {int(float(i)) for i in ds_id}
+    if not can_xoa:
+        return
+    dl = _du_lieu_moi()
+    dl["hoc_sinh"] = [d for d in dl["hoc_sinh"]
+                      if int(float(d["id"])) not in can_xoa]
+    dl["bai_lam"] = [b for b in dl["bai_lam"]
+                     if int(float(b["hs_id"])) not in can_xoa]
     _ghi("hoc_sinh", dl["hoc_sinh"])
     _ghi("bai_lam", dl["bai_lam"])
 

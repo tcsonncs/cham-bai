@@ -251,6 +251,37 @@ elif trang == "Học sinh":
             luu_tru.xoa_hoc_sinh(hs["id"])
             st.rerun()
 
+    if ds:
+        with st.expander("🗑 Xoá nhiều học sinh một lúc"):
+            nhan_theo_id = {
+                h["id"]: h["ho_ten"] + (f" ({h['ma_hs']})" if h.get("ma_hs")
+                                        else "")
+                for h in ds
+            }
+            cot1, cot2 = st.columns(2)
+            if cot1.button("Chọn tất cả", use_container_width=True):
+                st.session_state["chon_xoa"] = list(nhan_theo_id)
+                st.rerun()
+            if cot2.button("Bỏ chọn", use_container_width=True):
+                st.session_state["chon_xoa"] = []
+                st.rerun()
+
+            chon = st.multiselect(
+                "Chọn các em cần xoá", list(nhan_theo_id),
+                format_func=nhan_theo_id.get, key="chon_xoa")
+            dong_y = st.checkbox(
+                "Tôi chắc chắn — xoá cả ảnh và điểm của các em này",
+                disabled=not chon)
+
+            def _xoa_nhieu(ids):
+                luu_tru.xoa_nhieu_hoc_sinh(ids)
+                st.session_state["chon_xoa"] = []
+                st.session_state["_bao"] = f"Đã xoá {len(ids)} học sinh."
+
+            st.button(f"Xoá {len(chon)} em đã chọn", type="primary",
+                      disabled=not chon or not dong_y,
+                      on_click=_xoa_nhieu, args=(list(chon),))
+
     with st.expander("📥 Nhập danh sách từ file Excel / Word / CSV",
                      expanded=not ds):
         st.caption("File Excel cần cột họ tên (dòng tiêu đề có chữ “tên”). "
@@ -291,7 +322,7 @@ elif trang == "Học sinh":
                 if str(r.get("Họ tên") or "").strip()
                 and str(r.get("Họ tên")).strip().casefold() not in ten_da_co)
             if st.button(f"Nhập {so_se_nhap} học sinh vào đợt"):
-                dem = 0
+                can_them = []
                 for _, r in sua.iterrows():
                     ten = str(r.get("Họ tên") or "").strip()
                     if not ten or ten.lower() == "nan":
@@ -299,10 +330,10 @@ elif trang == "Học sinh":
                     if ten.casefold() in ten_da_co:
                         continue
                     ma = str(r.get("Mã HS") or "").strip()
-                    luu_tru.them_hoc_sinh(
-                        dot["id"], ten, "" if ma.lower() == "nan" else ma)
+                    can_them.append({"ho_ten": ten,
+                                     "ma_hs": "" if ma.lower() == "nan" else ma})
                     ten_da_co.add(ten.casefold())
-                    dem += 1
+                dem = luu_tru.them_nhieu_hoc_sinh(dot["id"], can_them)
                 st.session_state.pop("nhap_tam", None)
                 st.session_state["_bao"] = f"Đã thêm {dem} học sinh từ file."
                 st.rerun()
@@ -311,11 +342,10 @@ elif trang == "Học sinh":
         danh_sach = st.text_area("Mỗi dòng một họ tên", height=160,
                                  placeholder="Nguyễn Văn A\nTrần Thị B")
         if st.button("Thêm vào đợt"):
-            dem = 0
-            for dong in danh_sach.splitlines():
-                if dong.strip():
-                    luu_tru.them_hoc_sinh(dot["id"], dong.strip())
-                    dem += 1
+            ds_moi = [{"ho_ten": dong.strip(), "ma_hs": ""}
+                      for dong in danh_sach.splitlines() if dong.strip()]
+            dem = (luu_tru.them_nhieu_hoc_sinh(dot["id"], ds_moi)
+                   if ds_moi else 0)
             if dem:
                 st.session_state["_bao"] = f"Đã thêm {dem} học sinh."
                 st.rerun()
