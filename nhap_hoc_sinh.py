@@ -63,6 +63,16 @@ def _la_tieu_de(o) -> str:
     return ""
 
 
+def _giong_ten_rieng(o) -> bool:
+    """Một tiếng tên đứng riêng, ví dụ "An", "Bách" — dùng để biết cột sau
+    cột "Họ và tên" có phải phần tên bị tách ra không."""
+    o = _chuan_hoa(o)
+    if not o or any(ch.isdigit() for ch in o):
+        return False
+    tu = o.split()
+    return len(tu) == 1 and len(tu[0]) >= 2 and o[0].isalpha() and o[0].isupper()
+
+
 def _tu_bang(cac_dong) -> list:
     """cac_dong: danh sách dòng, mỗi dòng là danh sách ô (chuỗi).
 
@@ -74,6 +84,7 @@ def _tu_bang(cac_dong) -> list:
 
     cot_ten = cot_ma = None
     bat_dau = 0
+    nhan = []
     for i, dong in enumerate(cac_dong[:6]):
         nhan = [_la_tieu_de(o) for o in dong]
         if "ten" in nhan:
@@ -86,6 +97,31 @@ def _tu_bang(cac_dong) -> list:
             break
 
     phan_con = cac_dong[bat_dau:]
+
+    # Bảng điểm của trường thường có khối thống kê ở cuối; cắt trước khối đó
+    # để không đọc "Chưa Đạt", "Tốt", "Khá" thành tên học sinh.
+    for i, dong in enumerate(phan_con):
+        if any(x.casefold().startswith(("thống kê", "số học sinh", "số lượng",
+                                        "tổng số", "tổng cộng"))
+               for x in dong if x):
+            phan_con = phan_con[:i]
+            break
+
+    # Ô tiêu đề "Họ và tên" thường gộp (merge) trùm hai cột: cột sau không có
+    # tiêu đề nhưng chứa tên riêng ("An", "Anh", "Bách"). Ghép lại cho đủ tên.
+    if isinstance(cot_ten, int):
+        cot_cuoi = cot_ten
+        while cot_cuoi + 1 < len(nhan) and not nhan[cot_cuoi + 1]:
+            c = cot_cuoi + 1
+            gia_tri = [d[c] for d in phan_con if c < len(d) and d[c]]
+            if not gia_tri:
+                break
+            ti_le = sum(1 for v in gia_tri if _giong_ten_rieng(v)) / len(gia_tri)
+            if ti_le < 0.6:
+                break
+            cot_cuoi = c
+        if cot_cuoi > cot_ten:
+            cot_ten = tuple(range(cot_ten, cot_cuoi + 1))
     if cot_ten is None:
         # Không có tiêu đề: chọn cột nhiều họ tên nhất
         so_cot = max((len(d) for d in phan_con), default=0)
@@ -100,6 +136,18 @@ def _tu_bang(cac_dong) -> list:
         if tot_nhat is None or ti_le < 0.5:
             return []
         cot_ten = tot_nhat
+        # Bảng không có tiêu đề (bảng kiểm tra bài tập): tên hay bị tách thành
+        # cột "họ đệm" và cột "tên" ngay sau. Ghép nếu cột sau toàn một tiếng
+        # tên khác nhau (loại cột giới tính chỉ có Nam/Nữ).
+        c = cot_ten + 1
+        gia_tri = [d[c] for d in phan_con if c < len(d) and d[c]]
+        if gia_tri:
+            ti_le_ten = sum(1 for v in gia_tri
+                            if _giong_ten_rieng(v)) / len(gia_tri)
+            so_khac = len({v.casefold() for v in gia_tri})
+            if (ti_le_ten >= 0.6 and len(gia_tri) >= 5
+                    and so_khac / len(gia_tri) >= 0.25):
+                cot_ten = (cot_ten, c)
 
     ket_qua = []
     for dong in phan_con:
