@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+du_lieu/
+_tam/
+__pycache__/
+*.pyc
+
+# Tệp nội bộ có tên học sinh hoặc số liệu thử — không đưa lên GitHub
+BanGiao_PhienMoi.md
+KE_HOACH.md
+buoc_cham.py
+do_chinh_xac.py
+doc_trac_nghiem.py
