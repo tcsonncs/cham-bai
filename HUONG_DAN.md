@@ -4,6 +4,9 @@ Cập nhật: 26/10/2026
 
 ## 1. Mở app
 
+- **Trên mây (dùng được ở bất cứ đâu, không cần bật máy tính):**
+  https://cham-bai-2026.streamlit.app — mở bằng Safari trên iPhone, đăng nhập
+  bằng tài khoản Google đã được mời.
 - **Trên máy tính:** bấm đúp `CHAY_APP.bat`. Trình duyệt tự mở
   `http://localhost:8501`.
 - **Trên iPhone (cùng Wi-Fi với máy tính):** bấm đúp

@@ -271,8 +271,12 @@ elif trang == "Ảnh & đọc":
     st.caption(f"Bài này có {len(ds_anh)} ảnh.")
     for duong_dan in ds_anh:
         st.image(duong_dan, use_container_width=True)
+    if not ds_anh and bai.get("text_doc"):
+        st.info("Ảnh của bài này không còn trên máy chủ (máy chủ mây xoá ổ đĩa "
+                "khi khởi động lại). Nội dung đã bóc vẫn còn, chấm được bình "
+                "thường; muốn đọc lại thì tải ảnh lên lại.")
 
-    if st.button("Đọc bài bằng AI"):
+    if ds_anh and st.button("Đọc bài bằng AI"):
         thanh = st.progress(0.0, text="Đang đọc...")
 
         def tien_do(i, tong, ten):
