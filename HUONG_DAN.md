@@ -16,17 +16,14 @@ Cập nhật: 26/10/2026
 Máy tính và iPhone được nối vào một **mạng riêng** của Tailscale, nên iPhone
 vào được app từ bất cứ đâu mà người ngoài không thấy.
 
-- Trên máy tính: Tailscale đã cài và đã đăng nhập (máy tên `mr-son`,
-  địa chỉ `100.82.7.58`).
+- Trên máy tính: cài Tailscale và đăng nhập.
 - Trên iPhone: cài **Tailscale** từ App Store, đăng nhập **cùng tài khoản**
   đã dùng trên máy tính, bật công tắc VPN.
-- Mở Safari, gõ: `http://100.82.7.58:8501`
+- Xem địa chỉ của máy tính bằng lệnh `tailscale ip -4`, rồi trên iPhone mở
+  Safari gõ `http://<địa chỉ đó>:8501`.
 - Máy tính phải **bật**, app phải **đang chạy** (`CHAY_APP.bat`), máy không
   được ngủ.
-- Địa chỉ `100.82.7.58` giữ nguyên, không đổi như Wi-Fi trong nhà.
-
-Nếu đổi máy tính hoặc cài lại Tailscale, địa chỉ sẽ khác: chạy
-`tailscale ip -4` trên máy để xem địa chỉ mới.
+- Địa chỉ Tailscale giữ nguyên, không đổi như địa chỉ Wi-Fi trong nhà.
 
 ## 2. Trình tự một đợt chấm
 
