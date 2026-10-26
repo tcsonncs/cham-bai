@@ -94,6 +94,8 @@ if not doc_khoa():
     st.stop()
 
 st.title("Chấm bài Toán")
+st.caption("Kho dữ liệu: " + ("**Google Sheets**" if luu_tru.DUNG_SHEETS
+                             else "trên máy (mất khi máy chủ khởi động lại)"))
 if dot:
     st.caption(f"Đợt: **{dot['ten']}** — {dot.get('lop') or ''}")
 

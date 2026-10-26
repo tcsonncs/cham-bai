@@ -209,7 +209,9 @@ def _co_sheets() -> bool:
         return False
 
 
-if _co_sheets():
+DUNG_SHEETS = _co_sheets()
+
+if DUNG_SHEETS:
     # Chạy trên mây: thay các hàm đọc/ghi đĩa bằng bản ghi Google Sheets.
     # Các hàm thuần (doc_bai_day_du, lay_anh, luu_file_anh) giữ nguyên.
     import luu_tru_sheets as _kho_may
