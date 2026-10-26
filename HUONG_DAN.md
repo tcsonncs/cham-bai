@@ -31,7 +31,16 @@ vào được app từ bất cứ đâu mà người ngoài không thấy.
 ## 2. Trình tự một đợt chấm
 
 1. **Đợt & đề** — tạo đợt, tải file Word đề + biểu điểm, bấm *Nhờ AI lập
-   rubric*, đọc lại rubric rồi bấm *Dùng rubric này*.
+   rubric*.
+   - Mở *👀 Xem đề đã đọc* để xem đề có **công thức hiện đúng** không; chỗ nào
+     sai thì sửa trong ô nội dung rồi bấm *Lưu đề*.
+   - Màn rà soát rubric hiện bảng các câu và cho sửa **từng bước**: nội dung
+     bước, điểm bước, thêm/bớt bước, đáp án trắc nghiệm.
+   - Mục *⚠️ … chỗ nên xem lại* chỉ ra: bước gộp hai việc bằng chữ "và", bước
+     khoá vào một cách làm ("Sử dụng tỉ số lượng giác…") thay vì ghi kết quả,
+     tổng điểm các bước lệch điểm câu. Sửa hết rồi mới dùng.
+   - Bấm *✅ Dùng rubric này* (rubric mới lập) hoặc *💾 Lưu rubric* (rubric
+     đang dùng). Muốn lập lại từ đầu: mục *🔁 Lập lại rubric bằng AI*.
 2. **Học sinh** — nhập danh sách một trong hai cách:
    - *Nhập từ file*: chọn file Excel (.xlsx hoặc .xls kiểu cũ), Word
      (.docx), CSV hoặc TXT.
@@ -79,7 +88,7 @@ vào được app từ bất cứ đâu mà người ngoài không thấy.
 | Chọn A, B, C, D | Quy tắc cố định: so dấu bút với đáp án. Không gọi AI khi chấm. |
 | Đúng/Sai nhiều ý | Quy tắc cố định theo bảng điểm trong rubric. |
 | Trả lời ngắn | So khớp số/chữ với đáp án. |
-| Tự luận | Gemini chấm theo từng bước của rubric. |
+| Tự luận | Gemini chấm theo **kết quả từng bước** của rubric. Học sinh làm cách khác mà đúng vẫn được điểm; không trừ vì thiếu bước trung gian đề không bắt buộc. |
 
 Chỗ nào không chắc, app gắn ⚠️ và để Thầy quyết. Điểm **gợi ý** và điểm
 **chốt** lưu riêng để sau này đo được độ chính xác của máy.
