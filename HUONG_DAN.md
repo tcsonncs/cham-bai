@@ -44,11 +44,20 @@ vào được app từ bất cứ đâu mà người ngoài không thấy.
      *Chọn tất cả* (hoặc tích từng em) → tick ô xác nhận → bấm *Xoá … em đã
      chọn*. Xoá cả ảnh và điểm của các em đó, không khôi phục được.
 3. **Chụp bài** — chọn em trong danh sách (app tự chọn em đầu tiên chưa
-   chụp). Mỗi trang bài làm chụp một ảnh, bấm *Lưu trang vừa chụp*; ảnh hiện
-   ngay bên dưới, chụp nhầm thì bấm *Xoá*. Nút *Em tiếp theo* / *Em trước* để
-   chuyển nhanh sang em khác. Thanh trên cùng báo đã chụp mấy em.
-   Ảnh đã chụp sẵn từ thư viện điện thoại thì mở mục *Hoặc tải ảnh đã chụp
-   sẵn*.
+   chụp).
+   - Bấm **📷 Chụp trang** → camera của điện thoại mở **toàn màn hình**. Bấm
+     chụp, chọn *Dùng ảnh*, rồi bấm **Chụp trang** tiếp cho trang sau. Chụp
+     xong bao nhiêu trang cũng được, chưa cần lưu.
+   - Ảnh hiện thành dãy bên dưới, đánh số *Trang 1, 2, 3…*; bấm ✕ để bỏ trang
+     chụp nhầm.
+   - Chụp đủ thì bấm **💾 Lưu … trang vào bài** một lần cho tất cả. Ảnh chưa
+     lưu vẫn còn nếu lỡ khoá màn hình hay trang tự nạp lại.
+   - Ảnh đã chụp sẵn trong điện thoại: bấm **🖼 Lấy ảnh có sẵn trong máy**,
+     chọn được nhiều ảnh một lúc.
+   - Nút *Em tiếp theo* / *Em trước* để chuyển nhanh sang em khác. Thanh trên
+     cùng báo đã chụp mấy em.
+   - Trên máy tính không có camera điện thoại thì mở mục *Chụp bằng camera
+     của máy tính (webcam)*.
 4. **Ảnh & đọc** — chọn em, xem lại ảnh, bấm *Đọc bài bằng AI*. So nội dung
    bóc được với ảnh gốc, sửa chỗ sai, kiểm tra bảng trắc nghiệm, rồi bấm
    *Xác nhận nội dung*.

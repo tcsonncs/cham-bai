@@ -14,6 +14,7 @@ import streamlit as st
 import cham_bai
 import doc_bai
 import luu_tru
+import may_anh
 import nhap_hoc_sinh
 from cau_hinh import chuan_bi_thu_muc, doc_khoa
 from xuat_file import tao_file_excel
@@ -385,39 +386,52 @@ elif trang == "Chụp bài":
     hs = next(h for h in ds if h["id"] == chon_id)
     ds_anh_cu = ds_anh_goc(luu_tru.doc_bai_day_du(
         luu_tru.lay_bai(dot["id"], chon_id) or {}))
-    st.caption(f"Bài của **{hs['ho_ten']}** đang có **{len(ds_anh_cu)}** trang. "
-               "Mỗi lần chụp một trang; chụp xong trang nào bấm lưu trang đó.")
+    # --- Chụp liên tiếp nhiều trang, gửi về một lượt ---
+    if "lan_xoa_anh" not in st.session_state:
+        st.session_state["lan_xoa_anh"] = 0
+    if "ma_anh_da_luu" not in st.session_state:
+        st.session_state["ma_anh_da_luu"] = set()
 
-    if "lan_chup" not in st.session_state:
-        st.session_state["lan_chup"] = 0
-    khoa = st.session_state["lan_chup"]
-    chup = st.camera_input("Chụp trang bài làm",
-                           key=f"camera_{chon_id}_{khoa}")
-    if st.button("💾 Lưu trang vừa chụp", type="primary",
-                 disabled=chup is None):
-        ten = f"camera_{len(ds_anh_cu) + 1}.jpg"
-        duong_dan = luu_tru.luu_file_anh(dot["id"], chon_id, ten,
-                                         chup.getvalue())
-        them_anh(dot["id"], chon_id, [{"ten": ten, "duong_dan": duong_dan}])
-        st.session_state["_bao"] = (f"Đã lưu trang {len(ds_anh_cu) + 1} của "
-                                    f"{hs['ho_ten']}.")
-        st.session_state["lan_chup"] = khoa + 1
+    ket_qua_chup = may_anh.o_chup(
+        ten_hoc_sinh=hs["ho_ten"],
+        so_trang=len(ds_anh_cu),
+        lan_xoa=st.session_state["lan_xoa_anh"],
+        key=f"may_anh_{dot['id']}_{chon_id}",
+    )
+    ma = (ket_qua_chup or {}).get("ma") if isinstance(ket_qua_chup, dict) else None
+    if ma and ma not in st.session_state["ma_anh_da_luu"]:
+        moi = []
+        for i, muc in enumerate(ket_qua_chup.get("anh") or [], start=1):
+            du_lieu = may_anh.giai_du_lieu_anh(muc)
+            if not du_lieu:
+                continue
+            ten = f"camera_{len(ds_anh_cu) + i}.jpg"
+            duong_dan = luu_tru.luu_file_anh(dot["id"], chon_id, ten, du_lieu)
+            moi.append({"ten": ten, "duong_dan": duong_dan})
+        if moi:
+            them_anh(dot["id"], chon_id, moi)
+            st.session_state["_bao"] = (f"Đã lưu {len(moi)} trang cho "
+                                        f"{hs['ho_ten']}.")
+        else:
+            st.session_state["_bao"] = "Không đọc được ảnh nào, Thầy chụp lại giúp."
+        st.session_state["ma_anh_da_luu"].add(ma)
+        st.session_state["lan_xoa_anh"] += 1
         st.rerun()
 
-    with st.expander("Hoặc tải ảnh đã chụp sẵn từ thư viện"):
-        tai_len = st.file_uploader(
-            "Chọn ảnh (chọn được nhiều ảnh)", type=["jpg", "jpeg", "png", "webp"],
-            accept_multiple_files=True, key=f"tai_{chon_id}")
-        if tai_len and st.button("Lưu các ảnh này"):
-            moi = []
-            for tep in tai_len:
-                duong_dan = luu_tru.luu_file_anh(dot["id"], chon_id, tep.name,
-                                                 tep.getvalue())
-                moi.append({"ten": tep.name, "duong_dan": duong_dan})
-            them_anh(dot["id"], chon_id, moi)
-            st.session_state["lan_chup"] = khoa + 1
-            st.session_state["_bao"] = (f"Đã lưu {len(moi)} ảnh cho "
+    with st.expander("Chụp bằng camera của máy tính (webcam)"):
+        if "lan_chup" not in st.session_state:
+            st.session_state["lan_chup"] = 0
+        khoa = st.session_state["lan_chup"]
+        chup = st.camera_input("Chụp trang bài làm",
+                               key=f"camera_{chon_id}_{khoa}")
+        if st.button("💾 Lưu trang vừa chụp", disabled=chup is None):
+            ten = f"camera_{len(ds_anh_cu) + 1}.jpg"
+            duong_dan = luu_tru.luu_file_anh(dot["id"], chon_id, ten,
+                                             chup.getvalue())
+            them_anh(dot["id"], chon_id, [{"ten": ten, "duong_dan": duong_dan}])
+            st.session_state["_bao"] = (f"Đã lưu trang {len(ds_anh_cu) + 1} của "
                                         f"{hs['ho_ten']}.")
+            st.session_state["lan_chup"] = khoa + 1
             st.rerun()
 
     if ds_anh_cu:

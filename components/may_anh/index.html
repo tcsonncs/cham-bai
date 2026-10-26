@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chụp bài</title>
+<style>
+  :root {
+    --nen: #ffffff; --chu: #111827; --vien: #d1d5db; --nhat: #f3f4f6;
+    --chinh: #c62828; --chinh-dam: #8e1b1b; --xam: #6b7280;
+  }
+  [data-theme="dark"] {
+    --nen: #0e1117; --chu: #fafafa; --vien: #3d4450; --nhat: #1c222b;
+    --chinh: #e04b4b; --chinh-dam: #b33636; --xam: #9ca3af;
+  }
+  * {box-sizing: border-box;}
+  html, body {margin: 0; padding: 0; background: transparent;}
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--chu); overflow: hidden;
+  }
+  .hop {padding: 0; max-width: 720px; margin: 0 auto;}
+  .dau {font-size: 14px; color: var(--xam); margin: 0 0 8px;}
+  button {width: 100%; border: 0; border-radius: 10px; font-size: 17px;
+          font-weight: 600; padding: 16px; cursor: pointer; font-family: inherit;}
+  #chup {background: var(--chinh); color: #fff; font-size: 19px; padding: 20px;}
+  #chup:active {background: var(--chinh-dam);}
+  #thuvien {background: var(--nhat); color: var(--chu); margin-top: 8px;
+            font-size: 15px; padding: 12px; border: 1px solid var(--vien); font-weight: 500;}
+  #luu {background: var(--chinh); color: #fff; margin-top: 10px; display: none;}
+  #luu.hien {display: block;}
+  #luu:disabled {background: var(--vien); color: var(--xam); cursor: default;}
+  .day {display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px;}
+  .day:empty {display: none;}
+  .o {position: relative; border: 1px solid var(--vien); border-radius: 8px;
+      overflow: hidden; background: var(--nhat); aspect-ratio: 3 / 4;}
+  .o img {width: 100%; height: 100%; object-fit: cover; display: block;}
+  .o .so {position: absolute; left: 4px; bottom: 4px; background: rgba(0,0,0,.65);
+          color: #fff; font-size: 12px; padding: 1px 6px; border-radius: 10px;}
+  .o .bo {position: absolute; right: 3px; top: 3px; width: 26px; height: 26px;
+          border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; border: 0;
+          font-size: 15px; line-height: 1; padding: 0; display: flex;
+          align-items: center; justify-content: center; font-weight: 400;}
+  .trong {color: var(--xam); font-size: 14px; margin-top: 10px; text-align: center;}
+  .xong {color: #1b7f3b; font-size: 15px; margin-top: 10px; text-align: center;
+         font-weight: 600;}
+</style>
+</head>
+<body>
+<div class="hop" id="hop">
+  <div class="dau" id="dau"></div>
+  <button id="chup">📷 Chụp trang</button>
+  <button id="thuvien">🖼 Lấy ảnh có sẵn trong máy</button>
+  <div class="day" id="day"></div>
+  <div class="trong" id="trong">Chưa có trang nào. Bấm nút đỏ để chụp; chụp xong bấm tiếp cho trang sau.</div>
+  <button id="luu">Lưu 0 trang</button>
+  <div class="xong" id="xong"></div>
+</div>
+<input type="file" id="inp-chup" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="inp-thuvien" accept="image/*" multiple style="display:none">
+<script>
+(function () {
+  "use strict";
+  var CANH_MAX = 1900;       // cạnh dài nhất sau khi thu nhỏ (px)
+  var CHAT_LUONG = 0.85;     // chất lượng JPEG
+
+  function $(id) { return document.getElementById(id); }
+  function gui(type, them) {
+    var tin = {isStreamlitMessage: true, type: type};
+    if (them) { for (var k in them) { tin[k] = them[k]; } }
+    window.parent.postMessage(tin, "*");
+  }
+
+  var anh = [];        // [{ten, data: "data:image/jpeg;base64,..."}]
+  var lanXoa = null;   // mốc xoá đã biết
+  var daGui = 0;       // số trang đã gửi, chờ Python lưu xong
+  var tenHS = "";
+  var soTrangCo = 0;
+  var dangGui = false;
+  var KHOA = "";           // khoá lưu tạm ảnh chưa gửi
+  var daKhoiPhuc = false;
+
+  // Giữ ảnh chưa gửi trong sessionStorage: điện thoại khoá màn hình hay
+  // trang tự nạp lại thì ảnh đang chờ vẫn còn.
+  // Kho chỉ giữ ảnh của đúng "đời" lưu hiện tại (lan_xoa); đời đổi nghĩa là
+  // vừa lưu xong một lượt, ảnh cũ không được khôi phục lại.
+  function docKho() {
+    try {
+      var s = sessionStorage.getItem("may_anh:" + KHOA);
+      if (!s) { return null; }
+      var o = JSON.parse(s);
+      if (!o || o.doi !== lanXoa || !o.anh || !o.anh.length) { return null; }
+      return o.anh;
+    } catch (e) { return null; }
+  }
+  function ghiKho() {
+    if (!KHOA) { return; }
+    try {
+      if (anh.length && lanXoa !== null) {
+        sessionStorage.setItem("may_anh:" + KHOA,
+          JSON.stringify({doi: lanXoa, anh: anh}));
+      } else {
+        sessionStorage.removeItem("may_anh:" + KHOA);
+      }
+    } catch (e) { /* hết chỗ nhớ thì thôi, ảnh vẫn còn trên màn hình */ }
+  }
+
+  function capNhatChieuCao() {
+    var cao = $("hop").getBoundingClientRect().height;
+    gui("streamlit:setFrameHeight", {height: Math.ceil(cao) + 6});
+  }
+
+  function veDay() {
+    var day = $("day");
+    day.innerHTML = "";
+    anh.forEach(function (m, i) {
+      var o = document.createElement("div");
+      o.className = "o";
+      var im = document.createElement("img");
+      im.src = m.data;
+      im.alt = "Trang " + (soTrangCo + i + 1);
+      var so = document.createElement("span");
+      so.className = "so";
+      so.textContent = "Trang " + (soTrangCo + i + 1);
+      var bo = document.createElement("button");
+      bo.className = "bo";
+      bo.textContent = "✕";
+      bo.setAttribute("aria-label", "Bỏ trang này");
+      bo.onclick = function () { anh.splice(i, 1); ghiKho(); veDay(); };
+      o.appendChild(im);
+      o.appendChild(so);
+      o.appendChild(bo);
+      day.appendChild(o);
+    });
+
+    $("trong").style.display = anh.length ? "none" : "block";
+    $("dau").textContent = tenHS
+      ? "Bài của " + tenHS + " đang có " + soTrangCo + " trang"
+      : "";
+
+    var nutLuu = $("luu");
+    nutLuu.textContent = dangGui ? "Đang lưu…"
+      : "💾 Lưu " + anh.length + " trang vào bài";
+    if (anh.length) { nutLuu.classList.add("hien"); }
+    else { nutLuu.classList.remove("hien"); }
+    nutLuu.disabled = !anh.length || dangGui;
+
+    capNhatChieuCao();
+  }
+
+  // Thu nhỏ ảnh trong trình duyệt để gửi nhanh và nhẹ
+  function thuNho(tep) {
+    return new Promise(function (ok, loi) {
+      var url = URL.createObjectURL(tep);
+      var img = new Image();
+      img.onload = function () {
+        var w = img.naturalWidth || img.width;
+        var h = img.naturalHeight || img.height;
+        var tl = Math.min(1, CANH_MAX / Math.max(w, h));
+        w = Math.max(1, Math.round(w * tl));
+        h = Math.max(1, Math.round(h * tl));
+        var c = document.createElement("canvas");
+        c.width = w;
+        c.height = h;
+        var ctx = c.getContext("2d");
+        ctx.fillStyle = "#ffffff";          // ảnh trong suốt thành nền trắng
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        try { ok(c.toDataURL("image/jpeg", CHAT_LUONG)); }
+        catch (e) { loi(e); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); loi(new Error("Không đọc được ảnh")); };
+      img.src = url;
+    });
+  }
+
+  function themTep(dsTep) {
+    var ds = Array.prototype.slice.call(dsTep || []);
+    if (!ds.length) { return; }
+    $("xong").textContent = "";
+    var chuoi = Promise.resolve();
+    ds.forEach(function (tep) {
+      chuoi = chuoi.then(function () {
+        return thuNho(tep).then(function (data) {
+          if (dangGui) { return; }        // đã bấm lưu thì không nhận thêm
+          anh.push({ten: tep.name || "", data: data});
+          ghiKho();
+          veDay();
+        }).catch(function () { /* bỏ qua ảnh hỏng */ });
+      });
+    });
+    return chuoi;
+  }
+
+  $("inp-chup").addEventListener("change", function (e) {
+    // Chép ra mảng TRƯỚC khi xoá value, vì xoá value sẽ làm rỗng danh sách tệp
+    var ds = Array.prototype.slice.call(e.target.files || []);
+    e.target.value = "";       // để lần chụp sau vẫn nhận được tệp mới
+    themTep(ds);
+  });
+  $("inp-thuvien").addEventListener("change", function (e) {
+    var ds = Array.prototype.slice.call(e.target.files || []);
+    e.target.value = "";
+    themTep(ds);
+  });
+
+  $("chup").addEventListener("click", function () { $("inp-chup").click(); });
+  $("thuvien").addEventListener("click", function () { $("inp-thuvien").click(); });
+
+  $("luu").addEventListener("click", function () {
+    if (!anh.length || dangGui) { return; }
+    dangGui = true;
+    daGui = anh.length;
+    var ma = Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+    veDay();
+    gui("streamlit:setComponentValue", {
+      value: {ma: ma, anh: anh},
+      dataType: "json"
+    });
+  });
+
+  function nhanTin(e) {
+    var d = e.data;
+    if (!d || d.type !== "streamlit:render") { return; }
+
+    if (d.theme) {
+      document.documentElement.setAttribute(
+        "data-theme", d.theme.base === "dark" ? "dark" : "light");
+    }
+
+    var a = d.args || {};
+    tenHS = a.ten_hoc_sinh || "";
+    soTrangCo = a.so_trang || 0;
+    KHOA = a.khoa_luu || "";
+
+    // Lần hiện đầu tiên: nhận "đời" lưu rồi thử lấy lại ảnh đang chờ
+    if (!daKhoiPhuc && KHOA && typeof a.lan_xoa === "number") {
+      daKhoiPhuc = true;
+      lanXoa = a.lan_xoa;
+      var conCho = docKho();
+      if (conCho && conCho.length && !anh.length) { anh = conCho; }
+    }
+
+    if (typeof a.lan_xoa === "number") {
+      if (lanXoa === null) {
+        lanXoa = a.lan_xoa;
+      } else if (a.lan_xoa !== lanXoa) {
+        // Python đã lưu xong một lượt: dọn dãy ảnh
+        lanXoa = a.lan_xoa;
+        var vuaLuu = daGui;
+        anh = [];
+        ghiKho();          // xoá ảnh chờ đã lưu
+        daGui = 0;
+        dangGui = false;
+        $("xong").textContent = vuaLuu ? "✅ Đã lưu " + vuaLuu + " trang" : "";
+        veDay();
+        return;
+      }
+    }
+    veDay();
+  }
+
+  window.addEventListener("message", nhanTin);
+  window.addEventListener("resize", capNhatChieuCao);
+  veDay();
+  gui("streamlit:componentReady", {apiVersion: 1});
+})();
+</script>
+</body>
+</html>
