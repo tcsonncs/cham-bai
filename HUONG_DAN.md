@@ -33,7 +33,8 @@ vào được app từ bất cứ đâu mà người ngoài không thấy.
 1. **Đợt & đề** — tạo đợt, tải file Word đề + biểu điểm, bấm *Nhờ AI lập
    rubric*, đọc lại rubric rồi bấm *Dùng rubric này*.
 2. **Học sinh** — nhập danh sách một trong hai cách:
-   - *Nhập từ file*: chọn file Excel (.xlsx), Word (.docx), CSV hoặc TXT.
+   - *Nhập từ file*: chọn file Excel (.xlsx hoặc .xls kiểu cũ), Word
+     (.docx), CSV hoặc TXT.
      App tự tìm cột họ tên (và cột mã học sinh nếu có), hiện bảng để Thầy
      sửa/thêm/xoá dòng, rồi bấm *Nhập … học sinh vào đợt*. Tên đã có trong
      đợt thì tự bỏ qua. Có nút *Tải file Excel mẫu* nếu muốn điền theo mẫu.

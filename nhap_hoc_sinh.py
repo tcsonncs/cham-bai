@@ -4,6 +4,8 @@
 Dùng cho nút "Nhập từ file" ở màn hình Học sinh. Kết quả là danh sách
 ``{"ho_ten": ..., "ma_hs": ...}`` theo đúng thứ tự trong file, đã bỏ trùng
 và bỏ dòng tiêu đề.
+
+Excel đọc được cả .xlsx/.xlsm (openpyxl) và .xls kiểu cũ (xlrd).
 """
 import io
 import re
@@ -173,11 +175,8 @@ def _tu_van_ban(du_lieu: bytes) -> list:
 def doc_danh_sach(ten_tep: str, du_lieu: bytes) -> list:
     """Đọc file và trả về danh sách học sinh; file lạ thì đọc như văn bản."""
     ten = (ten_tep or "").lower()
-    if ten.endswith((".xlsx", ".xlsm")):
+    if ten.endswith((".xlsx", ".xlsm", ".xls")):
         return _tu_excel(du_lieu)
-    if ten.endswith(".xls"):
-        raise ValueError("File .xls kiểu cũ. Mở bằng Excel rồi Lưu thành "
-                         ".xlsx, hoặc dùng file Word/CSV.")
     if ten.endswith(".docx"):
         return _tu_word(du_lieu)
     return _tu_van_ban(du_lieu)
