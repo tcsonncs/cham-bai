@@ -7,10 +7,12 @@ rubric, duyệt điểm, xuất Excel. Dùng cho lớp dạy thêm 3–10 học 
 
 | Tệp | Việc |
 |---|---|
-| `app.py` | Giao diện Streamlit, 5 màn hình |
+| `app.py` | Giao diện Streamlit, 6 màn hình (thêm màn Chụp bài) |
 | `doc_bai.py` | Đọc ảnh: bóc chữ và đọc dấu bút chọn đáp án |
 | `cham_bai.py` | Lập rubric, chấm trắc nghiệm bằng quy tắc, chấm tự luận bằng Gemini |
+| `nhap_hoc_sinh.py` | Đọc danh sách học sinh từ Excel/Word/CSV/TXT |
 | `luu_tru.py` | Lưu trữ SQLite |
+| `luu_tru_sheets.py` | Lưu trữ Google Sheets qua Apps Script |
 | `xuat_file.py` | Xuất Excel |
 | `cau_hinh.py` | Khoá API, mô hình, gọi Gemini |
 

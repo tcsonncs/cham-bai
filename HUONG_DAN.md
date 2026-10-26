@@ -32,13 +32,25 @@ vào được app từ bất cứ đâu mà người ngoài không thấy.
 
 1. **Đợt & đề** — tạo đợt, tải file Word đề + biểu điểm, bấm *Nhờ AI lập
    rubric*, đọc lại rubric rồi bấm *Dùng rubric này*.
-2. **Học sinh** — dán danh sách họ tên, mỗi dòng một em.
-3. **Ảnh & đọc** — chọn từng em, tải ảnh (hoặc chụp), bấm *Đọc bài bằng AI*.
-   So nội dung bóc được với ảnh gốc, sửa chỗ sai, kiểm tra bảng trắc nghiệm,
-   rồi bấm *Xác nhận nội dung*.
-4. **Chấm & duyệt** — chọn em, bấm *Chấm bài*. Xem điểm, mở các câu có dấu ⚠️,
+2. **Học sinh** — nhập danh sách một trong hai cách:
+   - *Nhập từ file*: chọn file Excel (.xlsx), Word (.docx), CSV hoặc TXT.
+     App tự tìm cột họ tên (và cột mã học sinh nếu có), hiện bảng để Thầy
+     sửa/thêm/xoá dòng, rồi bấm *Nhập … học sinh vào đợt*. Tên đã có trong
+     đợt thì tự bỏ qua. Có nút *Tải file Excel mẫu* nếu muốn điền theo mẫu.
+   - *Gõ tay*: mỗi dòng một họ tên.
+   - Danh sách hiện trạng thái từng em: 📷 số ảnh, ✅ đã chấm.
+3. **Chụp bài** — chọn em trong danh sách (app tự chọn em đầu tiên chưa
+   chụp). Mỗi trang bài làm chụp một ảnh, bấm *Lưu trang vừa chụp*; ảnh hiện
+   ngay bên dưới, chụp nhầm thì bấm *Xoá*. Nút *Em tiếp theo* / *Em trước* để
+   chuyển nhanh sang em khác. Thanh trên cùng báo đã chụp mấy em.
+   Ảnh đã chụp sẵn từ thư viện điện thoại thì mở mục *Hoặc tải ảnh đã chụp
+   sẵn*.
+4. **Ảnh & đọc** — chọn em, xem lại ảnh, bấm *Đọc bài bằng AI*. So nội dung
+   bóc được với ảnh gốc, sửa chỗ sai, kiểm tra bảng trắc nghiệm, rồi bấm
+   *Xác nhận nội dung*.
+5. **Chấm & duyệt** — chọn em, bấm *Chấm bài*. Xem điểm, mở các câu có dấu ⚠️,
    sửa điểm nếu cần, bấm *Lưu & duyệt bài này*.
-5. **Xuất** — tải bảng điểm Excel.
+6. **Xuất** — tải bảng điểm Excel.
 
 ## 3. Cách chụp ảnh cho tốt
 
@@ -61,14 +73,19 @@ Chỗ nào không chắc, app gắn ⚠️ và để Thầy quyết. Điểm **g
 
 ## 5. Dữ liệu và chi phí
 
-- Dữ liệu nằm trong `du_lieu\cham_bai.db` và `du_lieu\anh\`. Sao lưu cả thư mục
-  này là đủ.
-- Khoá API để trong `.env` (không đưa lên mạng, không chép vào tài liệu).
+- **Trên mây:** điểm và tên học sinh lưu trong trang tính `ChamBaiToan`
+  (Google Sheets). Dòng đầu app báo “Kho dữ liệu: **Google Sheets**”.
+  Ảnh bài làm chỉ nằm tạm trên máy chủ và mất khi máy chủ khởi động lại;
+   nội dung bóc và điểm vẫn còn.
+- **Trên máy:** dữ liệu trong `du_lieu\cham_bai.db` và `du_lieu\anh\`.
+  Sao lưu cả thư mục này là đủ.
+- Khoá API để trong `.env` trên máy và trong Secrets trên Streamlit Cloud
+  (không đưa lên mạng, không chép vào tài liệu).
 - Mỗi đợt 10 bài tốn khoảng vài nghìn đồng tiền gọi Gemini.
 
 ## 6. Chưa có ở bản này
 
-- Chưa nối Google Sheets (dữ liệu mới lưu trên máy).
 - Chưa xuất PDF từng học sinh và tin nhắn Zalo.
 - Chưa xuất dữ liệu nghiên cứu ẩn danh.
-- Chưa đưa lên Streamlit Cloud (mới chạy trên máy và trong Wi-Fi nhà).
+- Chưa lưu ảnh bài làm lên Google Drive (trên mây, ảnh mất khi máy chủ
+  khởi động lại).

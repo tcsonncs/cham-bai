@@ -8,11 +8,13 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 
 import cham_bai
 import doc_bai
 import luu_tru
+import nhap_hoc_sinh
 from cau_hinh import chuan_bi_thu_muc, doc_khoa
 from xuat_file import tao_file_excel
 
@@ -53,6 +55,25 @@ def doc_file_word(tep) -> str:
                 phan.append(" | ".join(o.text.strip() for o in dong.cells))
         return "\n".join(phan)
     return tep.getvalue().decode("utf-8", errors="ignore")
+
+
+def ds_anh_goc(bai) -> list:
+    """Danh sách ảnh đã lưu của bài, dạng {"ten", "duong_dan"}."""
+    ds = (bai or {}).get("anh") or []
+    return [a if isinstance(a, dict)
+            else {"ten": Path(a).name, "duong_dan": a} for a in ds]
+
+
+def them_anh(dot_id: int, hs_id: int, moi: list) -> None:
+    """Nối thêm ảnh vào bài, giữ ảnh cũ."""
+    bai = luu_tru.lay_bai(dot_id, hs_id)
+    cu = ds_anh_goc(luu_tru.doc_bai_day_du(bai)) if bai else []
+    luu_tru.luu_anh_bai(dot_id, hs_id, cu + moi)
+
+
+def so_anh(dot_id: int, hs_id: int) -> int:
+    return len(ds_anh_goc(luu_tru.doc_bai_day_du(
+        luu_tru.lay_bai(dot_id, hs_id) or {})))
 
 
 def hien_thi_diem(ket_qua: dict, khoa: str):
@@ -100,9 +121,14 @@ if dot:
     st.caption(f"Đợt: **{dot['ten']}** — {dot.get('lop') or ''}")
 
 trang = st.radio(
-    "Chọn việc", ["Đợt & đề", "Học sinh", "Ảnh & đọc", "Chấm & duyệt", "Xuất"],
+    "Chọn việc",
+    ["Đợt & đề", "Học sinh", "Chụp bài", "Ảnh & đọc", "Chấm & duyệt", "Xuất"],
     horizontal=True, label_visibility="collapsed",
 )
+
+# Thông báo đặt trước khi nạp lại trang (nạp lại sẽ xoá thông báo cũ)
+if st.session_state.get("_bao"):
+    st.success(st.session_state.pop("_bao"))
 
 # ---------------- Đợt & đề ----------------
 
@@ -209,25 +235,189 @@ elif trang == "Học sinh":
 
     ds = luu_tru.danh_sach_hoc_sinh(dot["id"])
     st.write(f"Đợt này có **{len(ds)}** học sinh.")
+
     for hs in ds:
-        cot1, cot2 = st.columns([4, 1])
-        cot1.write(hs["ho_ten"])
+        bai = luu_tru.lay_bai(dot["id"], hs["id"])
+        so = len(ds_anh_goc(luu_tru.doc_bai_day_du(bai))) if bai else 0
+        da_cham = bool(bai and bai.get("ket_qua"))
+        cot1, cot2 = st.columns([5, 1])
+        nhan = f"**{hs['ho_ten']}**"
+        if hs.get("ma_hs"):
+            nhan += f" ({hs['ma_hs']})"
+        nhan += (" — ✅ đã chấm" if da_cham
+                 else f" — 📷 {so} ảnh" if so else " — chưa chụp")
+        cot1.write(nhan)
         if cot2.button("Xoá", key=f"xoa_hs_{hs['id']}"):
             luu_tru.xoa_hoc_sinh(hs["id"])
             st.rerun()
 
-    st.subheader("Thêm học sinh")
-    danh_sach = st.text_area("Mỗi dòng một họ tên", height=160,
-                             placeholder="Nguyễn Văn A\nTrần Thị B")
-    if st.button("Thêm vào đợt"):
-        dem = 0
-        for dong in danh_sach.splitlines():
-            if dong.strip():
-                luu_tru.them_hoc_sinh(dot["id"], dong.strip())
-                dem += 1
-        if dem:
-            st.success(f"Đã thêm {dem} học sinh.")
+    with st.expander("📥 Nhập danh sách từ file Excel / Word / CSV",
+                     expanded=not ds):
+        st.caption("File Excel cần cột họ tên (dòng tiêu đề có chữ “tên”). "
+                   "Cột mã học sinh nếu có. File Word đọc được cả bảng và "
+                   "danh sách đánh số.")
+        cot1, cot2 = st.columns(2)
+        tep = cot1.file_uploader(
+            "Chọn file", type=["xlsx", "xls", "xlsm", "docx", "csv", "txt"],
+            key=f"tep_nhap_{dot['id']}")
+        cot2.download_button(
+            "Tải file Excel mẫu", nhap_hoc_sinh.tao_file_mau(),
+            file_name="Mau_DanhSach_HocSinh.xlsx",
+            mime="application/vnd.openxmlformats-officedocument"
+                 ".spreadsheetml.sheet", use_container_width=True)
+
+        if tep is not None and st.button("Đọc danh sách từ file"):
+            try:
+                ds_nhap = nhap_hoc_sinh.doc_danh_sach(tep.name, tep.getvalue())
+                if ds_nhap:
+                    st.session_state["nhap_tam"] = ds_nhap
+                else:
+                    st.warning("Không tìm thấy tên học sinh nào trong file. "
+                               "Kiểm tra lại cột họ tên, hoặc tải file mẫu "
+                               "để xem cách trình bày.")
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"Không đọc được file: {exc}")
+
+        if st.session_state.get("nhap_tam"):
+            st.write("**Kiểm tra danh sách** (sửa trực tiếp, thêm/xoá dòng "
+                     "được) rồi bấm nhập:")
+            bang = pd.DataFrame(st.session_state["nhap_tam"])
+            bang = bang.rename(columns={"ho_ten": "Họ tên", "ma_hs": "Mã HS"})
+            sua = st.data_editor(bang, num_rows="dynamic", hide_index=True,
+                                 key=f"sua_nhap_{dot['id']}")
+            ten_da_co = {h["ho_ten"].casefold() for h in ds}
+            so_se_nhap = sum(
+                1 for _, r in sua.iterrows()
+                if str(r.get("Họ tên") or "").strip()
+                and str(r.get("Họ tên")).strip().casefold() not in ten_da_co)
+            if st.button(f"Nhập {so_se_nhap} học sinh vào đợt"):
+                dem = 0
+                for _, r in sua.iterrows():
+                    ten = str(r.get("Họ tên") or "").strip()
+                    if not ten or ten.lower() == "nan":
+                        continue
+                    if ten.casefold() in ten_da_co:
+                        continue
+                    ma = str(r.get("Mã HS") or "").strip()
+                    luu_tru.them_hoc_sinh(
+                        dot["id"], ten, "" if ma.lower() == "nan" else ma)
+                    ten_da_co.add(ten.casefold())
+                    dem += 1
+                st.session_state.pop("nhap_tam", None)
+                st.session_state["_bao"] = f"Đã thêm {dem} học sinh từ file."
+                st.rerun()
+
+    with st.expander("Hoặc gõ tay danh sách"):
+        danh_sach = st.text_area("Mỗi dòng một họ tên", height=160,
+                                 placeholder="Nguyễn Văn A\nTrần Thị B")
+        if st.button("Thêm vào đợt"):
+            dem = 0
+            for dong in danh_sach.splitlines():
+                if dong.strip():
+                    luu_tru.them_hoc_sinh(dot["id"], dong.strip())
+                    dem += 1
+            if dem:
+                st.session_state["_bao"] = f"Đã thêm {dem} học sinh."
+                st.rerun()
+
+# ---------------- Chụp bài ----------------
+
+elif trang == "Chụp bài":
+    dot = lay_dot_hien_tai()
+    if not dot:
+        st.warning("Chọn hoặc tạo đợt trước.")
+        st.stop()
+    ds = luu_tru.danh_sach_hoc_sinh(dot["id"])
+    if not ds:
+        st.warning("Chưa có học sinh. Sang mục Học sinh để nhập danh sách.")
+        st.stop()
+
+    so_theo_em = {h["id"]: so_anh(dot["id"], h["id"]) for h in ds}
+    da_chup = sum(1 for v in so_theo_em.values() if v)
+    st.progress(da_chup / len(ds), text=f"Đã chụp {da_chup}/{len(ds)} em")
+
+    ids = [h["id"] for h in ds]
+    ten_theo_id = {h["id"]: h["ho_ten"] for h in ds}
+
+    # Chuyển em bằng nút: ghi cờ rồi nạp lại, tránh sửa widget đã hiện
+    if "_chuyen_em" in st.session_state:
+        st.session_state["hs_dang_chup"] = st.session_state.pop("_chuyen_em")
+    if st.session_state.get("hs_dang_chup") not in ids:
+        st.session_state["hs_dang_chup"] = next(
+            (i for i in ids if not so_theo_em[i]), ids[0])
+
+    def nhan_em(i):
+        so = so_theo_em[i]
+        return f"{ten_theo_id[i]} — " + (f"{so} ảnh" if so else "chưa chụp")
+
+    chon_id = st.selectbox("Chọn học sinh để chụp", ids, format_func=nhan_em,
+                           key="hs_dang_chup")
+    hs = next(h for h in ds if h["id"] == chon_id)
+    ds_anh_cu = ds_anh_goc(luu_tru.doc_bai_day_du(
+        luu_tru.lay_bai(dot["id"], chon_id) or {}))
+    st.caption(f"Bài của **{hs['ho_ten']}** đang có **{len(ds_anh_cu)}** trang. "
+               "Mỗi lần chụp một trang; chụp xong trang nào bấm lưu trang đó.")
+
+    if "lan_chup" not in st.session_state:
+        st.session_state["lan_chup"] = 0
+    khoa = st.session_state["lan_chup"]
+    chup = st.camera_input("Chụp trang bài làm",
+                           key=f"camera_{chon_id}_{khoa}")
+    if st.button("💾 Lưu trang vừa chụp", type="primary",
+                 disabled=chup is None):
+        ten = f"camera_{len(ds_anh_cu) + 1}.jpg"
+        duong_dan = luu_tru.luu_file_anh(dot["id"], chon_id, ten,
+                                         chup.getvalue())
+        them_anh(dot["id"], chon_id, [{"ten": ten, "duong_dan": duong_dan}])
+        st.session_state["_bao"] = (f"Đã lưu trang {len(ds_anh_cu) + 1} của "
+                                    f"{hs['ho_ten']}.")
+        st.session_state["lan_chup"] = khoa + 1
+        st.rerun()
+
+    with st.expander("Hoặc tải ảnh đã chụp sẵn từ thư viện"):
+        tai_len = st.file_uploader(
+            "Chọn ảnh (chọn được nhiều ảnh)", type=["jpg", "jpeg", "png", "webp"],
+            accept_multiple_files=True, key=f"tai_{chon_id}")
+        if tai_len and st.button("Lưu các ảnh này"):
+            moi = []
+            for tep in tai_len:
+                duong_dan = luu_tru.luu_file_anh(dot["id"], chon_id, tep.name,
+                                                 tep.getvalue())
+                moi.append({"ten": tep.name, "duong_dan": duong_dan})
+            them_anh(dot["id"], chon_id, moi)
+            st.session_state["lan_chup"] = khoa + 1
+            st.session_state["_bao"] = (f"Đã lưu {len(moi)} ảnh cho "
+                                        f"{hs['ho_ten']}.")
             st.rerun()
+
+    if ds_anh_cu:
+        st.write(f"**{len(ds_anh_cu)} trang đã chụp** — bấm Xoá nếu chụp nhầm.")
+        cot_anh = st.columns(3)
+        for i, a in enumerate(ds_anh_cu):
+            with cot_anh[i % 3]:
+                if Path(a["duong_dan"]).exists():
+                    st.image(a["duong_dan"], use_container_width=True)
+                else:
+                    st.caption("(ảnh đã mất khi máy chủ khởi động lại)")
+                if st.button("Xoá", key=f"xoa_anh_{chon_id}_{i}"):
+                    con_lai = [x for j, x in enumerate(ds_anh_cu) if j != i]
+                    luu_tru.luu_anh_bai(dot["id"], chon_id, con_lai)
+                    try:  # xoá luôn tệp ảnh cho khỏi chật ổ đĩa
+                        Path(a["duong_dan"]).unlink(missing_ok=True)
+                    except OSError:
+                        pass
+                    st.session_state["_bao"] = f"Đã xoá trang {i + 1}."
+                    st.rerun()
+
+    st.divider()
+    vi_tri = ids.index(chon_id)
+    cot1, cot2 = st.columns(2)
+    if cot1.button("⬅️ Em trước"):
+        st.session_state["_chuyen_em"] = ids[vi_tri - 1]
+        st.rerun()
+    if cot2.button("Em tiếp theo ➡️"):
+        st.session_state["_chuyen_em"] = ids[(vi_tri + 1) % len(ids)]
+        st.rerun()
 
 # ---------------- Ảnh & đọc ----------------
 
@@ -245,29 +435,8 @@ elif trang == "Ảnh & đọc":
     hs = next(h for h in ds if h["ho_ten"] == ten_hs)
     bai = luu_tru.lay_bai(dot["id"], hs["id"])
 
-    st.subheader("Ảnh bài làm")
-    tai_len = st.file_uploader("Chọn ảnh từ điện thoại (chọn được nhiều ảnh)",
-                               type=["jpg", "jpeg", "png", "webp"],
-                               accept_multiple_files=True)
-    chup = st.camera_input("Hoặc chụp ảnh ngay")
-    if st.button("Lưu ảnh vào bài"):
-        ds_anh = []
-        for tep in tai_len or []:
-            duong_dan = luu_tru.luu_file_anh(dot["id"], hs["id"], tep.name,
-                                             tep.getvalue())
-            ds_anh.append({"ten": tep.name, "duong_dan": duong_dan})
-        if chup is not None:
-            duong_dan = luu_tru.luu_file_anh(dot["id"], hs["id"], "camera.jpg",
-                                             chup.getvalue())
-            ds_anh.append({"ten": "camera.jpg", "duong_dan": duong_dan})
-        if ds_anh:
-            luu_tru.luu_anh_bai(dot["id"], hs["id"], ds_anh)
-            st.success(f"Đã lưu {len(ds_anh)} ảnh.")
-            st.rerun()
-
-    bai = luu_tru.lay_bai(dot["id"], hs["id"])
     if not bai:
-        st.info("Chưa có ảnh cho học sinh này.")
+        st.info("Em này chưa có ảnh. Sang mục **Chụp bài** để chụp.")
         st.stop()
     ds_anh = luu_tru.lay_anh(bai)
     st.caption(f"Bài này có {len(ds_anh)} ảnh.")
@@ -311,8 +480,6 @@ elif trang == "Ảnh & đọc":
 
         marks = bai.get("trac_nghiem") or {}
         st.write("**Trắc nghiệm đọc được** (sửa được nếu máy đọc sai)")
-        import pandas as pd
-
         rows = marks.get("trac_nghiem") or []
         if rows:
             bang = pd.DataFrame([
