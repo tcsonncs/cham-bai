@@ -3,7 +3,6 @@
 
 Chạy:  streamlit run app.py
 """
-import io
 import json
 from datetime import datetime
 from pathlib import Path
@@ -13,8 +12,10 @@ import streamlit as st
 
 import cham_bai
 import doc_bai
+import doc_word
 import luu_tru
 import may_anh
+import sua_rubric
 import nhap_hoc_sinh
 from cau_hinh import chuan_bi_thu_muc, doc_khoa
 from xuat_file import tao_file_excel
@@ -44,18 +45,16 @@ def lay_dot_hien_tai():
 
 
 def doc_file_word(tep) -> str:
-    """Bóc chữ từ .docx (đoạn văn và bảng). Các định dạng khác đọc như văn bản."""
+    """Bóc chữ từ .docx, giữ công thức Equation dạng LaTeX. Định dạng khác đọc như chữ."""
     ten = (tep.name or "").lower()
     if ten.endswith(".docx"):
-        import docx
-
-        tai_lieu = docx.Document(io.BytesIO(tep.getvalue()))
-        phan = [p.text for p in tai_lieu.paragraphs if p.text.strip()]
-        for bang in tai_lieu.tables:
-            for dong in bang.rows:
-                phan.append(" | ".join(o.text.strip() for o in dong.cells))
-        return "\n".join(phan)
+        return doc_word.docx_sang_van_ban(tep.getvalue())
     return tep.getvalue().decode("utf-8", errors="ignore")
+
+
+def hien_cong_thuc(van_ban: str) -> str:
+    """Chữ có công thức LaTeX hiện đúng trên app (mỗi dòng một hàng)."""
+    return (van_ban or "").replace("\r\n", "\n").replace("\n", "  \n")
 
 
 def ds_anh_goc(bai) -> list:
@@ -178,26 +177,67 @@ if trang == "Đợt & đề":
 
     if st.button("Lưu đề"):
         luu_tru.cap_nhat_dot(dot["id"], de_bai=noi_dung)
-        st.success("Đã lưu đề.")
+        st.session_state["_bao"] = "Đã lưu đề."
+        st.rerun()
+
+    if (dot.get("de_bai") or "").strip():
+        with st.expander("👀 Xem đề đã đọc (công thức hiện đúng)"):
+            st.markdown(hien_cong_thuc(dot["de_bai"]))
+            st.caption("Chỗ nào công thức còn sai thì sửa trong ô nội dung ở "
+                       "trên rồi bấm *Lưu đề* — rubric lập sau đó sẽ dựa vào "
+                       "bản đã sửa.")
 
     st.subheader("Rubric")
-    if dot.get("rubric"):
+    if st.session_state.get("rubric_tam"):
+        st.subheader("Kiểm tra rubric trước khi dùng")
+        try:
+            tam = json.loads(st.session_state["rubric_tam"])
+        except (json.JSONDecodeError, TypeError):
+            st.error("Rubric AI vừa lập không phải JSON hợp lệ.")
+            tam = None
+        if tam is not None:
+            moi = sua_rubric.giao_dien(tam, khoa=f"rubric_tam_{dot['id']}",
+                                       nhan_nut="✅ Dùng rubric này")
+            if moi is not None:
+                luu_tru.cap_nhat_dot(dot["id"],
+                                     rubric=json.dumps(moi, ensure_ascii=False,
+                                                       indent=2),
+                                     de_bai=noi_dung)
+                st.session_state.pop("rubric_tam", None)
+                st.session_state["_bao"] = ("Đã lưu rubric. Sang mục Học sinh "
+                                            "để nhập danh sách.")
+                st.rerun()
+
+    elif dot.get("rubric"):
         try:
             rubric = json.loads(dot["rubric"])
-            tong = rubric.get("tong_diem")
-            st.write(f"Đã có rubric: **{len(rubric.get('cau', []))} câu**, "
-                     f"tổng {tong} điểm.")
-            for cau in rubric.get("cau", []):
-                st.write(f"- {cau.get('ma')} ({cau.get('loai')}) — "
-                         f"{cau.get('diem')} điểm")
-            with st.expander("Xem/sửa JSON rubric"):
-                sua = st.text_area("Rubric JSON", value=dot["rubric"], height=320)
-                if st.button("Lưu rubric đã sửa"):
-                    json.loads(sua)
-                    luu_tru.cap_nhat_dot(dot["id"], rubric=sua)
-                    st.success("Đã lưu.")
         except (json.JSONDecodeError, TypeError):
             st.error("Rubric đã lưu không phải JSON hợp lệ.")
+            rubric = None
+        if rubric is not None:
+            moi = sua_rubric.giao_dien(rubric, khoa=f"rubric_{dot['id']}")
+            if moi is not None:
+                luu_tru.cap_nhat_dot(dot["id"],
+                                     rubric=json.dumps(moi, ensure_ascii=False,
+                                                       indent=2))
+                st.session_state["_bao"] = "Đã lưu rubric."
+                st.rerun()
+            with st.expander("🔁 Lập lại rubric bằng AI từ đề hiện tại"):
+                st.caption("Dùng khi đề vừa đọc lại có công thức đầy đủ hơn. "
+                           "Rubric mới sẽ thay rubric đang có; Thầy vẫn xem và "
+                           "sửa được trước khi dùng.")
+                if st.button("Lập lại rubric"):
+                    if not noi_dung.strip():
+                        st.warning("Chưa có nội dung đề.")
+                    else:
+                        with st.spinner("Đang lập rubric..."):
+                            try:
+                                moi_rb = cham_bai.tao_rubric(noi_dung)
+                                st.session_state["rubric_tam"] = json.dumps(
+                                    moi_rb, ensure_ascii=False, indent=2)
+                                st.rerun()
+                            except Exception as exc:  # noqa: BLE001
+                                st.error(f"Lỗi: {exc}")
     else:
         st.caption("Chưa có rubric. Cần đề + biểu điểm ở trên rồi bấm nút dưới.")
         if st.button("Nhờ AI lập rubric"):
@@ -209,22 +249,9 @@ if trang == "Đợt & đề":
                         rubric = cham_bai.tao_rubric(noi_dung)
                         st.session_state["rubric_tam"] = json.dumps(
                             rubric, ensure_ascii=False, indent=2)
+                        st.rerun()
                     except Exception as exc:  # noqa: BLE001
                         st.error(f"Lỗi: {exc}")
-
-    if st.session_state.get("rubric_tam"):
-        st.subheader("Kiểm tra rubric trước khi dùng")
-        sua = st.text_area("Rubric do AI lập (sửa được)",
-                           value=st.session_state["rubric_tam"], height=360)
-        if st.button("Dùng rubric này"):
-            try:
-                json.loads(sua)
-                luu_tru.cap_nhat_dot(dot["id"], rubric=sua,
-                                     de_bai=noi_dung)
-                st.session_state.pop("rubric_tam", None)
-                st.success("Đã lưu rubric. Sang mục Học sinh để nhập danh sách.")
-            except json.JSONDecodeError as exc:
-                st.error(f"JSON lỗi: {exc}")
 
 # ---------------- Học sinh ----------------
 
