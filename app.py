@@ -4,6 +4,7 @@
 Chạy:  streamlit run app.py
 """
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -53,8 +54,34 @@ def doc_file_word(tep) -> str:
 
 
 def hien_cong_thuc(van_ban: str) -> str:
-    """Chữ có công thức LaTeX hiện đúng trên app (mỗi dòng một hàng)."""
-    return (van_ban or "").replace("\r\n", "\n").replace("\n", "  \n")
+    """Đổi chữ đã bóc (có công thức LaTeX) thành markdown để hiện cho dễ đọc.
+
+    Mỗi dòng thành một đoạn; các dòng có dấu | giữ liền nhau để hiện thành
+    bảng (bảng đáp án), tự thêm dòng kẻ nếu thiếu.
+    """
+    dong = (van_ban or "").replace("\r\n", "\n").split("\n")
+    khoi, bang = [], []
+
+    def xa_bang():
+        if not bang:
+            return
+        so_o = [d.count("|") for d in bang]
+        if len(bang) >= 2 and len(set(so_o)) == 1 and so_o[0] >= 1:
+            # Các dòng cùng số cột: hiện thành bảng thật
+            khoi.append(bang[0] + "\n" + "|" + " --- |" * (so_o[0] + 1)
+                        + "\n" + "\n".join(bang[1:]))
+        else:
+            khoi.append("  \n".join(bang))
+        bang.clear()
+
+    for d in dong:
+        if "|" in d:
+            bang.append(d)
+        else:
+            xa_bang()
+            khoi.append(d if d.strip() else "")
+    xa_bang()
+    return "\n\n".join(khoi)
 
 
 def ds_anh_goc(bai) -> list:
@@ -162,30 +189,39 @@ if trang == "Đợt & đề":
         st.stop()
 
     st.subheader("Đề và biểu điểm")
-    tep = st.file_uploader("Tải file Word đề + biểu điểm", type=["docx", "txt", "md"])
-    noi_dung = st.text_area(
-        "Nội dung đề + đáp án + biểu điểm (sửa được)",
-        value=dot.get("de_bai") or "", height=260,
-        placeholder="Dán đề và biểu điểm vào đây, hoặc tải file Word ở trên.",
-    )
-    if tep and st.button("Bóc chữ từ file vừa tải"):
-        st.session_state["de_tam"] = doc_file_word(tep)
-        st.rerun()
-    if st.session_state.get("de_tam"):
-        noi_dung = st.text_area("Nội dung bóc từ file (sửa rồi lưu)",
-                                value=st.session_state["de_tam"], height=260)
+    noi_dung = dot.get("de_bai") or ""
 
-    if st.button("Lưu đề"):
-        luu_tru.cap_nhat_dot(dot["id"], de_bai=noi_dung)
-        st.session_state["_bao"] = "Đã lưu đề."
-        st.rerun()
+    # Bản đọc được đặt trước; khung chữ thô (có $...$) nằm trong mục sửa
+    if noi_dung.strip():
+        st.markdown(hien_cong_thuc(noi_dung))
+        st.caption("Đây là đề app đang dùng để lập rubric và chấm. Muốn sửa "
+                   "thì mở mục *✏️ Tải hoặc sửa đề* bên dưới.")
+    else:
+        st.info("Chưa có nội dung đề. Mở mục *✏️ Tải hoặc sửa đề* bên dưới để "
+                "tải file Word hoặc dán đề.")
 
-    if (dot.get("de_bai") or "").strip():
-        with st.expander("👀 Xem đề đã đọc (công thức hiện đúng)"):
-            st.markdown(hien_cong_thuc(dot["de_bai"]))
-            st.caption("Chỗ nào công thức còn sai thì sửa trong ô nội dung ở "
-                       "trên rồi bấm *Lưu đề* — rubric lập sau đó sẽ dựa vào "
-                       "bản đã sửa.")
+    with st.expander("✏️ Tải hoặc sửa đề, đáp án, biểu điểm"):
+        tep = st.file_uploader("Tải file Word đề + biểu điểm",
+                               type=["docx", "txt", "md"])
+        sua = st.text_area(
+            "Nội dung đề + đáp án + biểu điểm",
+            value=noi_dung, height=260,
+            placeholder="Dán đề và biểu điểm vào đây, hoặc tải file Word ở trên.",
+        )
+        if tep and st.button("Bóc chữ từ file vừa tải"):
+            st.session_state["de_tam"] = doc_file_word(tep)
+            st.rerun()
+        if st.session_state.get("de_tam"):
+            sua = st.text_area("Nội dung bóc từ file (sửa rồi lưu)",
+                               value=st.session_state["de_tam"], height=260)
+        st.caption("Công thức nằm giữa hai dấu $ … $ là công thức trong dòng, "
+                   "$$ … $$ là công thức riêng một dòng. Không cần sửa nếu app "
+                   "đã hiện đúng ở phần trên.")
+        if st.button("Lưu đề"):
+            luu_tru.cap_nhat_dot(dot["id"], de_bai=sua)
+            st.session_state.pop("de_tam", None)
+            st.session_state["_bao"] = "Đã lưu đề."
+            st.rerun()
 
     st.subheader("Rubric")
     if st.session_state.get("rubric_tam"):

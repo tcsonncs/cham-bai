@@ -18,6 +18,19 @@ LOAI = {"trac_nghiem": "Trắc nghiệm", "dung_sai": "Đúng/Sai",
 # Cụm từ cho thấy bước bị khoá vào một cách làm
 CACH_LAM = ("sử dụng", "dùng", "áp dụng", "vận dụng", "theo tỉ số", "nhờ")
 
+# "… và kết luận", "… và trả lời" là cách nói tự nhiên, không phải gộp hai việc
+DUOI_KET = ("kết luận", "trả lời", "ghi kết quả", "nêu đáp số", "so sánh",
+            "đối chiếu", "kết thúc", "trình bày")
+
+
+def _gop_hai_viec(mo_ta: str) -> bool:
+    """Bước có gộp hai việc thật không (bỏ qua 'và kết luận')."""
+    for phan in re.split(r"\bvà\b", mo_ta, flags=re.I)[1:]:
+        duoi = phan.strip().lower()
+        if duoi and not duoi.startswith(DUOI_KET):
+            return True
+    return False
+
 
 def _id() -> str:
     return uuid.uuid4().hex[:8]
@@ -42,7 +55,7 @@ def kiem_tra(rubric: dict) -> list:
             mo_ta = (b.get("mo_ta") or "").strip()
             if not mo_ta:
                 nhac.append(f"**{ma}**: có bước chưa ghi nội dung.")
-            if re.search(r"\bvà\b", mo_ta, re.I):
+            if _gop_hai_viec(mo_ta):
                 nhac.append(f"**{ma}** — bước “{mo_ta}” gộp hai việc bằng chữ "
                             "“và”; nên tách thành hai bước hoặc chỉ ghi kết quả "
                             "mà đề hỏi.")
