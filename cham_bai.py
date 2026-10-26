@@ -16,6 +16,11 @@ Hãy chuyển thành rubric JSON để máy chấm bài. Quy ước:
 - "tra_loi_ngan": câu trả lời ngắn. Ghi "dap_an" là chuỗi đáp án đúng.
 - "tu_luan": câu tự luận. Chia thành các "buoc", mỗi bước có "mo_ta" và "diem".
   Tổng điểm các bước phải bằng điểm của câu.
+  Viết "mo_ta" thành KẾT QUẢ cần đạt ("Tính đúng độ dài AH"), không khoá vào
+  một cách làm ("Dùng sin tính AH"); không đòi bước trung gian mà đề không
+  hỏi. Mỗi bước chỉ nêu MỘT kết quả: nếu đáp án gộp hai việc bằng chữ "và"
+  (ví dụ "tính góc B và tính AH") thì tách thành hai bước, hoặc chỉ ghi kết
+  quả mà đề bài thực sự hỏi. Không tự thêm việc mà đề không yêu cầu.
 - Điểm mỗi câu đặt ở "diem". Tổng các câu ghi ở "tong_diem".
 - "so_cau" là số thứ tự câu trên đề (1, 2, 3, ...), dùng để khớp với dấu bút
   học sinh đánh trên tờ đề. Câu tự luận không cần "so_cau".
@@ -55,6 +60,14 @@ Quy tắc chấm:
 - Chấm từng bước theo đúng rubric. Điểm mỗi bước phải là bội số của 0,25 và
   không vượt quá điểm tối đa của bước đó.
 - Học sinh làm cách khác đáp án nhưng vẫn đúng toán thì cho điểm bình thường.
+- Chấm theo KẾT QUẢ của bước, không chấm theo cách làm. Học sinh đạt kết quả
+  bằng bất kỳ cách đúng nào (tỉ số lượng giác, định lí Pythagore, hệ thức
+  lượng trong tam giác vuông, diện tích tam giác, tam giác đồng dạng…) đều
+  được điểm. Không trừ vì thiếu một bước trung gian có trong đáp án mà đề
+  không bắt buộc, và không trừ vì học sinh không làm một việc mà đề không hỏi.
+- Nếu "mo_ta" của bước gộp hai việc bằng chữ "và": cho điểm khi học sinh làm
+  đúng và ra kết quả; chỉ trừ khi đề bắt buộc cả hai việc. Ghi rõ trong
+  "nhan_xet" lý do trừ để giáo viên kiểm tra lại.
 - Nếu không thấy bài làm của một câu: cho 0 điểm và đặt "nghi_van": true.
 - Đặt "nghi_van": true khi: chữ đọc không chắc ảnh hưởng đến điểm; học sinh ra
   kết quả khác đáp án nhưng cách làm gần đúng; hoặc không chắc có nên cho điểm.
