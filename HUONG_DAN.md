@@ -32,8 +32,10 @@ vào được app từ bất cứ đâu mà người ngoài không thấy.
 
 1. **Đợt & đề** — tạo đợt, tải file Word đề + biểu điểm, bấm *Nhờ AI lập
    rubric*.
-   - Mở *👀 Xem đề đã đọc* để xem đề có **công thức hiện đúng** không; chỗ nào
-     sai thì sửa trong ô nội dung rồi bấm *Lưu đề*.
+   - Đề và đáp án hiện sẵn thành **bản đọc được** (công thức, hệ phương trình,
+     bảng đáp án). Chỗ nào sai thì mở *✏️ Tải hoặc sửa đề*, sửa trong khung
+     chữ rồi bấm *Lưu đề* — khung đó là chữ thô có dấu `$`, bình thường không
+     cần mở.
    - Màn rà soát rubric hiện bảng các câu và cho sửa **từng bước**: nội dung
      bước, điểm bước, thêm/bớt bước, đáp án trắc nghiệm.
    - Mục *⚠️ … chỗ nên xem lại* chỉ ra: bước gộp hai việc bằng chữ "và", bước
