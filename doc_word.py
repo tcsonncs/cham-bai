@@ -32,6 +32,13 @@ KY_HIEU = {
     "⋆": "*", "…": r"\ldots ", "∑": r"\sum ", "∫": r"\int ",
     "¬": r"\neg ", "∧": r"\land ", "∨": r"\lor ",
     "²": "^{2}", "³": "^{3}", "¹": "^{1}",
+    # Dấu gõ thẳng trong chữ của công thức: nếu để nguyên, LaTeX sẽ coi { } là
+    # nhóm (mất ngoặc tập hợp), \ là lệnh (A\B báo đỏ), % là ghi chú.
+    "{": r"\{", "}": r"\}", "\\": r"\setminus ", "∖": r"\setminus ",
+    "%": r"\%", "↦": r"\mapsto ", "ℝ": r"\mathbb{R}", "ℕ": r"\mathbb{N}",
+    "ℤ": r"\mathbb{Z}", "ℚ": r"\mathbb{Q}", "ℂ": r"\mathbb{C}",
+    "⊆": r"\subseteq ", "⊃": r"\supset ", "⊇": r"\supseteq ",
+    "≡": r"\equiv ", "∣": r"\mid ", "∤": r"\nmid ", "∼": r"\sim ",
 }
 for _i, _c in enumerate("⁰¹²³⁴⁵⁶⁷⁸⁹"):
     KY_HIEU[_c] = "^{%d}" % _i
@@ -231,8 +238,11 @@ def to_latex(el) -> str:
         return dau + "{" + (to_latex(_con(el, "e") or el) or "").strip() + "}"
 
     if ten == "eqArr":
-        return r" \\ ".join((to_latex(c) or "").strip()
-                            for c in _con_truc_tiep(el, "e"))
+        # Dấu & (căn dòng) và \\ chỉ hợp lệ trong một môi trường
+        return (r"\begin{aligned}"
+                + r" \\ ".join((to_latex(c) or "").strip()
+                               for c in _con_truc_tiep(el, "e"))
+                + r"\end{aligned}")
 
     # Phần tử lạ: bỏ qua phần định dạng, lấy chữ bên trong
     if ten in ("rPr", "ctrlPr", "fPr", "dPr", "naryPr", "radPr", "accPr",
