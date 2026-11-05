@@ -208,7 +208,41 @@ def lay_anh(bai: dict):
     """
     ds = _doc_json(bai.get("anh")) or []
     duong_dan = [a["duong_dan"] if isinstance(a, dict) else a for a in ds]
-    return [p for p in duong_dan if p and Path(p).exists()]
+    return [p for p in duong_dan if p and khoi_phuc_anh(p)]
+
+
+def _ten_drive(duong_dan) -> str:
+    """Tên file trên Drive suy từ đường dẫn: <đợt>_<học sinh>_<tên tệp>."""
+    p = Path(duong_dan)
+    return f"{p.parent.parent.name}_{p.parent.name}_{p.name}"
+
+
+def khoi_phuc_anh(duong_dan) -> bool:
+    """Ảnh có trên đĩa chưa; nếu chưa và đang dùng Sheets thì tải lại từ Drive."""
+    p = Path(duong_dan)
+    if p.exists():
+        return True
+    if not DUNG_SHEETS:
+        return False
+    try:
+        du_lieu = _kho_may.tai_anh_ve(_ten_drive(p))
+    except Exception:  # noqa: BLE001
+        return False
+    if not du_lieu:
+        return False
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_bytes(du_lieu)
+    return True
+
+
+def xoa_file_anh(duong_dan) -> None:
+    """Xoá ảnh trên đĩa và (nếu có) trên Drive."""
+    Path(duong_dan).unlink(missing_ok=True)
+    if DUNG_SHEETS:
+        try:
+            _kho_may.xoa_anh_drive(_ten_drive(duong_dan))
+        except Exception:  # noqa: BLE001
+            pass
 
 
 def luu_file_anh(dot_id: int, hs_id: int, ten: str, du_lieu: bytes) -> str:
@@ -219,6 +253,14 @@ def luu_file_anh(dot_id: int, hs_id: int, ten: str, du_lieu: bytes) -> str:
     duoi = Path(ten).suffix.lower() or ".jpg"
     tep = thu_muc / f"{uuid.uuid4().hex}{duoi}"
     tep.write_bytes(du_lieu)
+    if DUNG_SHEETS:
+        try:
+            _kho_may.tai_anh_len(_ten_drive(tep), du_lieu)
+        except Exception as loi:  # noqa: BLE001
+            tep.unlink(missing_ok=True)
+            raise RuntimeError(
+                "Không lưu được ảnh lên Google Drive (đã dán mã Apps Script "
+                f"mới và cấp quyền Drive chưa?): {loi}") from loi
     return str(tep)
 
 

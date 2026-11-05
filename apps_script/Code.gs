@@ -35,12 +35,55 @@ function doPost(e) {
       ghiBang(goi.sheet, goi.rows || []);
       return tra({ok: true});
     }
+    // Ảnh bài làm lưu thành file trong thư mục Drive riêng, không mất khi
+    // máy chủ Streamlit khởi động lại.
+    if (goi.action === 'luu_anh') {
+      return tra({ok: true, id: luuAnh(goi.ten, goi.b64)});
+    }
+    if (goi.action === 'lay_anh') {
+      var b64 = layAnh(goi.ten);
+      return tra(b64 === null ? {ok: true, co: false}
+                              : {ok: true, co: true, b64: b64});
+    }
+    if (goi.action === 'xoa_anh') {
+      xoaAnh(goi.ten);
+      return tra({ok: true});
+    }
     return tra({ok: false, loi: 'action khong ho tro: ' + goi.action});
   } catch (loi) {
     return tra({ok: false, loi: String(loi)});
   } finally {
     khoa.releaseLock();
   }
+}
+
+var THU_MUC_ANH = 'ChamBaiToan_Anh';
+
+function thuMucAnh() {
+  var it = DriveApp.getFoldersByName(THU_MUC_ANH);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(THU_MUC_ANH);
+}
+
+function timAnh(ten) {
+  var it = thuMucAnh().getFilesByName(ten);
+  return it.hasNext() ? it.next() : null;
+}
+
+function luuAnh(ten, b64) {
+  var cu = timAnh(ten);
+  if (cu) { cu.setTrashed(true); }
+  var blob = Utilities.newBlob(Utilities.base64Decode(b64), 'image/jpeg', ten);
+  return thuMucAnh().createFile(blob).getId();
+}
+
+function layAnh(ten) {
+  var f = timAnh(ten);
+  return f ? Utilities.base64Encode(f.getBlob().getBytes()) : null;
+}
+
+function xoaAnh(ten) {
+  var f = timAnh(ten);
+  if (f) { f.setTrashed(true); }
 }
 
 function tra(obj) {

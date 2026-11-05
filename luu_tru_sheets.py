@@ -74,6 +74,26 @@ def lam_moi() -> None:
     st.session_state.pop("_sheets_cache", None)
 
 
+# ---------- ảnh trên Google Drive (qua Apps Script) ----------
+
+def tai_anh_len(ten: str, du_lieu: bytes) -> None:
+    import base64
+
+    _goi("luu_anh", ten=ten, b64=base64.b64encode(du_lieu).decode("ascii"))
+
+
+def tai_anh_ve(ten: str):
+    """Trả về bytes ảnh từ Drive, hoặc None nếu không có."""
+    import base64
+
+    kq = _goi("lay_anh", ten=ten)
+    return base64.b64decode(kq["b64"]) if kq.get("co") else None
+
+
+def xoa_anh_drive(ten: str) -> None:
+    _goi("xoa_anh", ten=ten)
+
+
 def _json(gia_tri):
     if gia_tri is None:
         return ""

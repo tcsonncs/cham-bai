@@ -21,7 +21,26 @@ import nhap_hoc_sinh
 from cau_hinh import chuan_bi_thu_muc, doc_khoa
 from xuat_file import tao_file_excel
 
-st.set_page_config(page_title="Chấm bài Toán", page_icon="📝", layout="centered")
+def _icon_app():
+    try:
+        from PIL import Image
+        return Image.open(Path(__file__).parent / "icon.png")
+    except Exception:
+        return "📝"
+
+
+st.set_page_config(page_title="Chấm bài Toán", page_icon=_icon_app(), layout="centered")
+
+# Biểu tượng khi "Thêm vào Màn hình chính" trên iPhone (Streamlit không tự có thẻ này)
+try:
+    import streamlit.components.v1 as _cp
+    _cp.html(
+        "<script>try{var d=window.parent.document;"
+        "if(!d.querySelector('link[rel=apple-touch-icon]')){var l=d.createElement('link');"
+        "l.rel='apple-touch-icon';l.href='/app/static/apple-touch-icon.png';d.head.appendChild(l);}"
+        "}catch(e){}</script>", height=0)
+except Exception:
+    pass
 
 st.markdown(
     """
@@ -143,7 +162,7 @@ if not doc_khoa():
 
 st.title("Chấm bài Toán")
 st.caption("Kho dữ liệu: " + ("**Google Sheets**" if luu_tru.DUNG_SHEETS
-                             else "trên máy (mất khi máy chủ khởi động lại)"))
+                             else "trên máy này (file du_lieu\\cham_bai.db)"))
 if dot:
     st.caption(f"Đợt: **{dot['ten']}** — {dot.get('lop') or ''}")
 
@@ -502,15 +521,15 @@ elif trang == "Chụp bài":
         cot_anh = st.columns(3)
         for i, a in enumerate(ds_anh_cu):
             with cot_anh[i % 3]:
-                if Path(a["duong_dan"]).exists():
+                if luu_tru.khoi_phuc_anh(a["duong_dan"]):
                     st.image(a["duong_dan"], use_container_width=True)
                 else:
-                    st.caption("(ảnh đã mất khi máy chủ khởi động lại)")
+                    st.caption("(không tìm thấy ảnh — chụp lại giúp)")
                 if st.button("Xoá", key=f"xoa_anh_{chon_id}_{i}"):
                     con_lai = [x for j, x in enumerate(ds_anh_cu) if j != i]
                     luu_tru.luu_anh_bai(dot["id"], chon_id, con_lai)
                     try:  # xoá luôn tệp ảnh cho khỏi chật ổ đĩa
-                        Path(a["duong_dan"]).unlink(missing_ok=True)
+                        luu_tru.xoa_file_anh(a["duong_dan"])
                     except OSError:
                         pass
                     st.session_state["_bao"] = f"Đã xoá trang {i + 1}."
